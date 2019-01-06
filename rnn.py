@@ -115,8 +115,8 @@ if __name__ == '__main__':
             metrics=['accuracy']
         )
 
-        #train
-        if not os.path.exists(model_save_file) or transfer_learn:
+        train = not os.path.exists(model_save_file) or transfer_learn
+        if train:
             if not os.path.exists('checkpoints'):
                 os.mkdir('checkpoints')
             checkpoint = ModelCheckpoint(
@@ -133,7 +133,7 @@ if __name__ == '__main__':
                 epochs=nepochs, 
                 verbose=2, 
                 callbacks=[ResetStates(), checkpoint], 
-                validation_split=.1, 
+                validation_split=.2, 
                 shuffle=False
             )
 
