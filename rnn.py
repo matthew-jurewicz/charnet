@@ -5,6 +5,7 @@ from keras.utils import to_categorical
 from keras.models import Sequential
 from keras.layers import LSTM, TimeDistributed, Dense
 from keras.optimizers import RMSprop
+from keras.callbacks import Callback, ModelCheckpoint
 
 def load_data(data_save_file, vocab_save_file, transfer_learn, seq_len):
     if os.path.exists(vocab_save_file):
@@ -45,9 +46,9 @@ def load_data(data_save_file, vocab_save_file, transfer_learn, seq_len):
         one_hot += [[0] * vocab_len] * pad_size
 
         #no label for last sequence
-        x = np.reshape(one_hot[:-1], (-1,1,seq_len,vocab_len))
+        x = np.reshape(one_hot[:-1], (-1,seq_len,vocab_len))
         #label is next sequence
-        y = np.reshape(one_hot[1:], (-1,1,seq_len,vocab_len))
+        y = np.reshape(one_hot[1:], (-1,seq_len,vocab_len))
         np.savez_compressed(data_save_file, x=x, y=y)
 
     return x, y, char2idx
@@ -79,6 +80,15 @@ def load_model(nneurons, drop_rate, nlayers, input_shape):
 
     return model
 
+class ResetStates(Callback):
+    def on_epoch_end(self, epoch, logs={}):
+        self.model.reset_states()
+
+#https://en.wikipedia.org/wiki/Softmax_function#Reinforcement_learning
+def softmax(vals, temperature):
+    tmp = np.exp(np.log(vals) / temperature)
+    return tmp / np.sum(tmp)
+
 if __name__ == '__main__':
     if len(sys.argv) < 3:
         print('python rnn.py [data save file] [vocab save file] [optional model save file] [optional transfer learning flag]')
@@ -106,4 +116,44 @@ if __name__ == '__main__':
             loss='binary_crossentropy', 
             metrics=['accuracy']
         )
-        pass
+
+        #train
+        if not os.path.exists(model_save_file) or transfer_learn:
+            if not os.path.exists('checkpoints'):
+                os.mkdir('checkpoints')
+            checkpoint = ModelCheckpoint(
+                filepath='checkpoints/rnn-{val_acc:.3f}.h5', 
+                save_best_only=True, 
+                save_weights_only=True
+            )
+
+            nepochs = 50
+            model.fit(
+                x=x, 
+                y=y, 
+                batch_size=1, 
+                epochs=nepochs, 
+                verbose=2, 
+                callbacks=[ResetStates(), checkpoint], 
+                validation_split=.1, 
+                shuffle=False
+            )
+
+    idx2char = {v:k for k,v in char2idx.items()}
+    #generate text
+    n = 1000
+    #start sequence
+    x = x[0].tolist()
+    s = ''
+    for i in range(n):
+        x2 = [[x]]
+        #NOTE: update keras to use 64-bit floats
+        pred = model.predict_on_batch(x2)[0][-1]
+        pred = softmax(pred, .5)
+        rand = np.random.choice(range(vocab_len), p=pred)
+        s += idx2char[rand]
+
+        one_hot = np.zeros(vocab_len)
+        one_hot[rand] = 1
+        x = x[1:] + one_hot
+    print(s)
