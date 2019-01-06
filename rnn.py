@@ -111,7 +111,7 @@ if __name__ == '__main__':
 
         model.compile(
             optimizer=RMSprop(lr=learn_rate), 
-            loss='binary_crossentropy', 
+            loss='categorical_crossentropy', 
             metrics=['accuracy']
         )
 
