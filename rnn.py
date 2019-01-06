@@ -63,7 +63,7 @@ def load_model(nneurons, drop_rate, nlayers, input_shape):
         stateful=True
     ))
 
-    for i in range(nlayers):
+    for i in range(nlayers - 1):
         if drop_rate > 0:
             model.add(Dropout(rate=drop_rate))
         model.add(CuDNNLSTM(
