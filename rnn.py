@@ -153,5 +153,5 @@ if __name__ == '__main__':
 
         one_hot = np.zeros(vocab_len)
         one_hot[rand] = 1
-        x = x[1:] + one_hot
+        x = x[1:] + [one_hot]
     print(s)
