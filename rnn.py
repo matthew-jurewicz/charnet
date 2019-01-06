@@ -3,7 +3,7 @@ import numpy as np
 
 from keras.utils import to_categorical
 from keras.models import Sequential
-from keras.layers import LSTM, TimeDistributed, Dense
+from keras.layers import CuDNNLSTM, Dropout, TimeDistributed, Dense
 from keras.optimizers import RMSprop
 from keras.callbacks import Callback, ModelCheckpoint
 
@@ -56,30 +56,27 @@ def load_data(data_save_file, vocab_save_file, transfer_learn, seq_len):
 def load_model(nneurons, drop_rate, nlayers, input_shape):
     model = Sequential()
     #stateful LSTM better for text generation
-    model.add(LSTM(
+    model.add(CuDNNLSTM(
         batch_input_shape=input_shape, 
         units=nneurons, 
-        dropout=drop_rate, 
-        recurrent_dropout=drop_rate, 
         return_sequences=True, 
-        stateful=True, 
-        unroll=True
+        stateful=True
     ))
 
     for i in range(nlayers):
-        model.add(LSTM(
+        if drop_rate > 0:
+            model.add(Dropout(rate=drop_rate))
+        model.add(CuDNNLSTM(
             units=nneurons, 
-            dropout=drop_rate, 
-            recurrent_dropout=drop_rate, 
             return_sequences=True, 
-            stateful=True, 
-            unroll=True
+            stateful=True
         ))
     vocab_len = input_shape[-1]
     model.add(TimeDistributed(Dense(vocab_len, activation='sigmoid')))
 
     return model
 
+#manually reset states for stateful LSTM
 class ResetStates(Callback):
     def on_epoch_end(self, epoch, logs={}):
         self.model.reset_states()
