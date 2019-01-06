@@ -42,9 +42,9 @@ def load_data(data_save_file, vocab_save_file, transfer_learn, seq_len):
         one_hot += [[0] * vocab_len] * pad_size
 
         #no label for last sequence
-        x = np.reshape(one_hot[:-1], (-1,seq_len,vocab_len))
-        #label is start of next sequence
-        y = np.array(one_hot[1::seq_len])
+        x = np.reshape(one_hot[:-1], (-1,1,seq_len,vocab_len))
+        #label is next sequence
+        y = np.reshape(one_hot[1:], (-1,1,seq_len,vocab_len))
         np.savez_compressed(data_save_file, x=x, y=y)
 
     return x, y, char2idx
