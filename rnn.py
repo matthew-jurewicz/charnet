@@ -103,10 +103,11 @@ if __name__ == '__main__':
         model = load_model(nneurons, drop_rate, nlayers, (1,seq_len,vocab_len))
 
         learn_rate = 1e-3
-        if transfer_learn:
+        if os.path.exists(model_save_file):
             model.load_weights(model_save_file)
-            #smaller learning rate for fine-tuning
-            learn_rate = 1e-4
+            if transfer_learn:
+                #smaller learning rate for fine-tuning
+                learn_rate = 1e-4
 
         model.compile(
             optimizer=RMSprop(lr=learn_rate), 
