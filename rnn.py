@@ -2,6 +2,9 @@ import sys, os, io
 import numpy as np
 
 from keras.utils import to_categorical
+from keras.models import Sequential
+from keras.layers import LSTM, TimeDistributed, Dense
+from keras.optimizers import RMSprop
 
 def load_data(data_save_file, vocab_save_file, transfer_learn, seq_len):
     if os.path.exists(vocab_save_file):
@@ -49,6 +52,33 @@ def load_data(data_save_file, vocab_save_file, transfer_learn, seq_len):
 
     return x, y, char2idx
 
+def load_model(nneurons, drop_rate, nlayers, input_shape):
+    model = Sequential()
+    #stateful LSTM better for text generation
+    model.add(LSTM(
+        batch_input_shape=input_shape, 
+        units=nneurons, 
+        dropout=drop_rate, 
+        recurrent_dropout=drop_rate, 
+        return_sequences=True, 
+        stateful=True, 
+        unroll=True
+    ))
+
+    for i in range(nlayers):
+        model.add(LSTM(
+            units=nneurons, 
+            dropout=drop_rate, 
+            recurrent_dropout=drop_rate, 
+            return_sequences=True, 
+            stateful=True, 
+            unroll=True
+        ))
+    vocab_len = input_shape[-1]
+    model.add(TimeDistributed(Dense(vocab_len, activation='sigmoid')))
+
+    return model
+
 if __name__ == '__main__':
     if len(sys.argv) < 3:
         print('python rnn.py [data save file] [vocab save file] [optional model save file] [optional transfer learning flag]')
@@ -58,4 +88,22 @@ if __name__ == '__main__':
         transfer_learn = len(sys.argv) == 5
         seq_len = 100
         x, y, char2idx = load_data(data_save_file, vocab_save_file, transfer_learn, seq_len)
+        
+        vocab_len = len(char2idx)
+        nneurons = 128
+        drop_rate = .5
+        nlayers = 3
+        model = load_model(nneurons, drop_rate, nlayers, (1,seq_len,vocab_len))
+
+        learn_rate = 1e-3
+        if transfer_learn:
+            model.load_weights(model_save_file)
+            #smaller learning rate for fine-tuning
+            learn_rate = 1e-4
+
+        model.compile(
+            optimizer=RMSprop(lr=learn_rate), 
+            loss='binary_crossentropy', 
+            metrics=['accuracy']
+        )
         pass
