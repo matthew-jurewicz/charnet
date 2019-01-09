@@ -71,6 +71,8 @@ def load_model(nneurons, drop_rate, nlayers, input_shape):
             return_sequences=True, 
             stateful=True
         ))
+
+    model.add(Dropout(rate=drop_rate))
     vocab_len = input_shape[-1]
     model.add(TimeDistributed(Dense(vocab_len, activation='sigmoid')))
 
