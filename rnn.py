@@ -3,7 +3,7 @@ import numpy as np
 
 from keras.utils import to_categorical
 from keras.models import Sequential
-from keras.layers import Bidirectional, CuDNNLSTM, Dropout, TimeDistributed, Dense
+from keras.layers import CuDNNLSTM, Dropout, TimeDistributed, Dense
 from keras.optimizers import RMSprop
 from keras.callbacks import Callback, ModelCheckpoint
 
@@ -56,25 +56,25 @@ def load_data(data_save_file, vocab_save_file, transfer_learn, seq_len):
 def load_model(nneurons, drop_rate, nlayers, input_shape):
     model = Sequential()
     #stateful LSTM better for text generation
-    lstm = CuDNNLSTM(
+    model.add(CuDNNLSTM(
+        batch_input_shape=input_shape, 
         units=nneurons, 
         return_sequences=True, 
         stateful=True
-    )
-    model.add(Bidirectional(lstm, batch_input_shape=input_shape))
+    ))
 
     for i in range(nlayers - 1):
         if drop_rate > 0:
             model.add(Dropout(rate=drop_rate))
-        model.add(Bidirectional(CuDNNLSTM(
+        model.add(CuDNNLSTM(
             units=nneurons, 
             return_sequences=True, 
             stateful=True
-        )))
+        ))
 
     model.add(Dropout(rate=drop_rate))
     vocab_len = input_shape[-1]
-    model.add(TimeDistributed(Dense(vocab_len, activation='sigmoid')))
+    model.add(TimeDistributed(Dense(vocab_len, activation='softmax')))
 
     return model
 
