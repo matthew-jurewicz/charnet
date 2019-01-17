@@ -5,7 +5,7 @@ from keras.utils import to_categorical
 from keras.models import Sequential
 from keras.layers import CuDNNLSTM, Dropout, TimeDistributed, Dense
 from keras.optimizers import RMSprop
-from keras.callbacks import Callback, ModelCheckpoint
+from keras.callbacks import Callback, ModelCheckpoint, LearningRateScheduler
 
 def load_data(data_save_file, vocab_save_file, transfer_learn, seq_len):
     if os.path.exists(vocab_save_file):
@@ -127,6 +127,9 @@ if __name__ == '__main__':
                 save_weights_only=True
             )
 
+            step_decay = lambda epoch: learn_rate * (.9 ** epoch)
+            scheduler = LearningRateScheduler(schedule=step_decay)
+
             nepochs = 50
             model.fit(
                 x=x, 
@@ -134,7 +137,7 @@ if __name__ == '__main__':
                 batch_size=1, 
                 epochs=nepochs, 
                 verbose=2, 
-                callbacks=[ResetStates(), checkpoint], 
+                callbacks=[ResetStates(), checkpoint, scheduler], 
                 validation_split=.2, 
                 shuffle=False
             )
